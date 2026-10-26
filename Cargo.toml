@@ -1,0 +1,14 @@
+[package]
+name = "tine-ledger"
+version = "0.1.0-alpha.1"
+edition = "2021"
+license = "MIT"
+description = "Independent ledger foundations and a read-only Tine diagnostic alpha"
+
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+tine-plugin-sdk = { git = "https://github.com/martinkoutecky/tine", rev = "daabe817fd5b2e53ad0384a207714cfbc752d733" }

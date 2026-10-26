@@ -1,0 +1,11 @@
+/target/
+/dist/
+/node_modules/
+/private/
+/backups/
+/sandbox/
+*.log
+*.zip
+*.sha256
+.env
+.env.*

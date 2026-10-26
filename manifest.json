@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "dev.ellismorrow.tine-ledger",
+  "name": "Tine Ledger — diagnostic alpha",
+  "version": "0.1.0-alpha.1",
+  "apiVersion": "0.2",
+  "description": "Read-only checks for a proposed personal-ledger record format. Full capture and reports await official host APIs.",
+  "author": "EllisMorrow",
+  "license": "MIT",
+  "source": "https://github.com/EllisMorrow/tine-ledger",
+  "entry": "target/wasm32-unknown-unknown/release/tine_ledger.wasm",
+  "platforms": ["desktop"],
+  "capabilities": ["commands.register"],
+  "contributions": {
+    "commands": [
+      {"id": "readiness", "title": "Ledger: Show API readiness"},
+      {"id": "validate-current-block", "title": "Ledger: Validate focused block (diagnostic alpha)"}
+    ]
+  },
+  "aiDevelopment": "primary"
+}

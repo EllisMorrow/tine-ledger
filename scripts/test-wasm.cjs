@@ -1,0 +1,38 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname,'../manifest.json'),'utf8'));
+const bytes = fs.readFileSync(path.resolve(__dirname,'..',manifest.entry));
+const moduleObject = new WebAssembly.Module(bytes);
+assert.deepEqual(WebAssembly.Module.imports(moduleObject),[{module:'env',name:'memory',kind:'memory'}]);
+const memory = new WebAssembly.Memory({initial:32,maximum:256});
+const instance = new WebAssembly.Instance(moduleObject,{env:{memory}});
+const encoder = new TextEncoder();
+const decoder = new TextDecoder('utf-8',{fatal:true});
+function invoke(event) {
+  const input = encoder.encode(JSON.stringify(event));
+  const ptr = instance.exports.tine_alloc(input.length);
+  assert.notEqual(ptr,0);
+  new Uint8Array(memory.buffer,ptr,input.length).set(input);
+  const result = instance.exports.tine_handle(ptr,input.length);
+  const length = instance.exports.tine_result_len();
+  assert.ok(length <= 256*1024);
+  const response = JSON.parse(decoder.decode(new Uint8Array(memory.buffer,result,length)));
+  assert.equal(response.protocolVersion,2);
+  assert.ok(response.effects.every(e => e.kind === 'notice'),'diagnostic must not emit write effects');
+  return response;
+}
+const basic = {protocolVersion:2,kind:'command',contributionId:'readiness'};
+assert.match(invoke(basic).effects[0].message,/diagnostic alpha/i);
+const raw = 'Lunch\nledger-kind:: expense\nledger-amount:: 28.00\nledger-currency:: CNY\nledger-category:: [[Ledger categories/Food/Meals]]\nledger-at:: 20261026123000\nledger-timezone:: +08:00\nledger-account:: [[Wallet]]';
+const event = {...basic,contributionId:'validate-current-block',focusedBlock:{id:'test-block',raw,parentId:null,depth:0,format:'md'}};
+assert.match(invoke(event).effects[0].message,/expense 28\.00/);
+const invalid = invoke({...event,focusedBlock:{...event.focusedBlock,raw:raw.replace('28.00','-1')}});
+assert.equal(invalid.effects[0].level,'error');
+assert.equal(invoke({...event,focusedBlock:undefined}).effects[0].level,'error');
+assert.equal(invoke({...event,focusedBlock:{...event.focusedBlock,format:'org'}}).effects[0].level,'error');
+assert.equal(invoke({...event,protocolVersion:99}).effects[0].level,'error');
+assert.deepEqual(invoke({protocolVersion:2,kind:'activate',settings:{}}).effects,[]);
+assert.deepEqual(invoke({...basic,contributionId:'unknown'}).effects,[]);
+assert.equal(instance.exports.tine_alloc(256*1024+1),0);
+console.log('Actual Wasm checks passed: imports, bounded ABI, valid record, invalid amount, missing focus, Org refusal, protocol mismatch, lifecycle no-op, unknown command, read-only effects.');
